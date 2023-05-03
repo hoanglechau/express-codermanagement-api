@@ -1,9 +1,17 @@
-var express = require('express');
-var router = express.Router();
+const express = require("express");
+const router = express.Router();
+const { StatusCodes } = require("http-status-codes");
+const userRoute = require("./userRoute");
+const taskRoute = require("./taskRoute");
 
-/* GET home page. */
-router.get('/', function(req, res, next) {
-  res.render('index', { title: 'Express' });
+router.get("/", function(req, res) {
+  res.status(StatusCodes.OK).json({ message: "Welcome to CoderManagement!" });
 });
+
+// USER
+router.use("/users", userRoute);
+
+// TASK
+router.use("/tasks", taskRoute);
 
 module.exports = router;
