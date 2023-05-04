@@ -1,4 +1,4 @@
-require("dontenv").config();
+require("dotenv").config();
 const express = require("express");
 const path = require("path");
 
@@ -7,8 +7,8 @@ const cookieParser = require("cookie-parser");
 const logger = require("morgan");
 const cors = require("cors");
 const helmet = require("helmet");
-const notFound = require("./middlewares/notFound");
-const errorHandler = require("./middlewares/errorHandler");
+const notFound = require("./middlewares/not-found");
+const errorHandler = require("./middlewares/error-handler");
 
 // Routers
 const indexRouter = require("./routes/index");
