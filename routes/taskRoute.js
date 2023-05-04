@@ -6,7 +6,7 @@ const {
   updateTask,
   deleteTask,
   assignTask,
-} = require("../controllers/task.controller");
+} = require("../controllers/task");
 const { body } = require("express-validator");
 const router = express.Router();
 
@@ -24,7 +24,7 @@ router.post("/", body("name").isString(), createTask);
  * @route GET api/tasks
  * @description Get a list of tasks
  * @access private
- * @allowedQueries: name
+ * @allowedQueries: name, status, assignee
  */
 router.get("/", getTasks);
 
@@ -41,16 +41,16 @@ router.get("/:id", getSingleTask);
  * @route PUT api/tasks/:id
  * @description Update task's information
  * @access private, manager
- * @requiredBody: updateinfo
+ * @requiredBody: status
  */
 router.put("/:id", updateTask);
 
 // UPDATE
 /**
- * @route PUT api/tasks/:id
+ * @route PATCH api/tasks/:id
  * @description Assign tasks or unassign tasks
  * @access private, manager
- * @requiredBody: updateinfo.tasks
+ * @requiredBody: assignee
  */
 router.patch("/:id", assignTask);
 
