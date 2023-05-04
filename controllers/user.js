@@ -33,8 +33,8 @@ const createUser = async (req, res, next) => {
     }
 
     // Check if user already exists
-    const users = await User.find({});
-    if (users.filter(item => (item.name = name))) {
+    const existingUser = await User.findOne({ name });
+    if (existingUser) {
       const error = new Error("User already exists!");
       error.statusCode = 404;
       throw error;
@@ -58,7 +58,7 @@ const createUser = async (req, res, next) => {
     const user = await User.create(req.body);
     res
       .status(StatusCodes.CREATED)
-      .json({ user, message: "Create User Success" });
+      .json({ user, message: "Create user successfully!" });
   } catch (err) {
     next(err);
   }
@@ -67,7 +67,7 @@ const createUser = async (req, res, next) => {
 // Get all users
 const getUsers = async (req, res, next) => {
   const page = req.query.page ? req.query.page : 1;
-  const filter = {};
+  const filter = req.query ? req.query : {};
   const limit = req.query.limit ? req.query.limit : 10;
 
   try {
@@ -80,7 +80,7 @@ const getUsers = async (req, res, next) => {
       .slice(skip, Number(limit) + skip);
 
     res.status(StatusCodes.OK).json({
-      user: result,
+      users: result,
       page,
       total: result.length,
       message: "Get users successfully!",
@@ -101,6 +101,7 @@ const getSingleUserByName = async (req, res, next) => {
       error.statusCode = 404;
       throw error;
     }
+
     // Find the user by name
     const users = await User.find({}).populate("tasks");
     const user = users.filter(item => item.name.toLowerCase() === name);
@@ -111,6 +112,7 @@ const getSingleUserByName = async (req, res, next) => {
       error.statusCode = 500;
       throw error;
     }
+
     res
       .status(StatusCodes.OK)
       .json({ user, message: "Get user successfully!" });
@@ -119,19 +121,19 @@ const getSingleUserByName = async (req, res, next) => {
   }
 };
 
-// Get a single user by id
-const getSingleUserById = async (req, res, next) => {
-  const id = req.params.id;
+// Get all tasks of a user
+const getUserTasks = async (req, res, next) => {
+  const { id: userId } = req.params;
 
   try {
     // Check if the required data is missing
-    if (!id) {
+    if (!userId) {
       const error = new Error("Missing required data!");
       error.statusCode = 404;
       throw error;
     }
     // Find the user by id
-    const user = await User.findOne({ id });
+    const user = await User.findOne({ _id: userId });
 
     // Check if the user exists
     if (!user || user.isDeleted) {
@@ -139,9 +141,10 @@ const getSingleUserById = async (req, res, next) => {
       error.statusCode = 500;
       throw error;
     }
+
     res
       .status(StatusCodes.OK)
-      .json({ user, message: "Get user successfully!" });
+      .json({ tasks: user.tasks, message: "Get user's tasks successfully!" });
   } catch (err) {
     next(err);
   }
@@ -186,9 +189,13 @@ const updateUser = async (req, res, next) => {
     }
 
     // Update the user, using option new: true to return latest data
-    const updatedUser = await User.findByIdAndUpdate(userId, req.body, {
-      new: true,
-    });
+    const updatedUser = await User.findByIdAndUpdate(
+      userId,
+      { name, role },
+      {
+        new: true,
+      }
+    );
 
     res
       .status(StatusCodes.OK)
@@ -246,7 +253,7 @@ module.exports = {
   createUser,
   getUsers,
   getSingleUserByName,
-  getSingleUserById,
+  getUserTasks,
   updateUser,
   deleteUser,
 };
