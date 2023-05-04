@@ -1,4 +1,5 @@
 const Task = require("../models/Task");
+const User = require("../models/User");
 const { CustomError } = require("../utils/helpers");
 const { StatusCodes } = require("http-status-codes");
 let taskStatus = ["pending", "working", "review", "done", "archive"];
@@ -15,7 +16,7 @@ function isValidObjectId(id) {
 
 // Create a new task
 const createTask = async (req, res, next) => {
-  const { name, description, status, user_name } = req.body;
+  const { name, description, status, assignee } = req.body;
 
   try {
     // Check if required data is missing
@@ -32,8 +33,8 @@ const createTask = async (req, res, next) => {
     }
 
     // Check if task already exists
-    const tasks = await Task.find({});
-    if (tasks.filter(item => (item.name = name))) {
+    const existingTask = await Task.findOne({ name });
+    if (existingTask) {
       const error = new Error("Task already exists!");
       error.statusCode = 404;
       throw error;
@@ -43,9 +44,9 @@ const createTask = async (req, res, next) => {
     const task = await Task.create(req.body);
 
     // Add task to the task collection
-    // If user_name is included in the request body, the new task will be assigned to that user
+    // If assignee is included in the request body, the new task will be assigned to that user
     // $addToSet operator adds a value to an array unless the value is already present, in which case $addToSet does nothing to that array
-    await Task.findByIdAndUpdate(user_name, {
+    await Task.findByIdAndUpdate(assignee, {
       $addToSet: { tasks: task._id },
     });
 
@@ -60,13 +61,13 @@ const createTask = async (req, res, next) => {
 // Get all tasks
 const getTasks = async (req, res, next) => {
   const page = req.query.page ? req.query.page : 1;
-  const filter = req.query.filter ? req.query.filter : {};
+  const filter = req.query ? req.query : {};
   const limit = req.params.limit ? req.params.limit : 10;
 
   try {
     const skip = (Number(page) - 1) * Number(limit);
 
-    const tasks = await Task.find(filter).populate("user_name");
+    const tasks = await Task.find(filter).populate("assignee");
     const result = tasks
       .filter(item => item.isDeleted != true)
       .slice(skip, Number(limit) + skip);
@@ -102,7 +103,7 @@ const getSingleTask = async (req, res, next) => {
     }
 
     // Get the task
-    const task = await Task.findById(taskId).populate("user_name");
+    const task = await Task.findById(taskId).populate("assignee");
 
     // Check if the task exists
     if (!task || task.isDeleted) {
@@ -123,6 +124,7 @@ const getSingleTask = async (req, res, next) => {
 const updateTask = async (req, res, next) => {
   const taskId = req.params.id;
   const { status } = req.body;
+  console.log(status);
 
   try {
     // Check for missing data
@@ -162,9 +164,13 @@ const updateTask = async (req, res, next) => {
     }
 
     // Update the task with option to return the latest data
-    const updatedTask = await Task.findByIdAndUpdate(taskId, req.body, {
-      new: true,
-    });
+    const updatedTask = await Task.findByIdAndUpdate(
+      taskId,
+      { status },
+      {
+        new: true,
+      }
+    );
 
     res
       .status(StatusCodes.OK)
@@ -174,10 +180,10 @@ const updateTask = async (req, res, next) => {
   }
 };
 
-// Assign a task to a user
+// Assign a task to a user when there's a userId. Else, unassign the task
 const assignTask = async (req, res, next) => {
   const { id: taskId } = req.params;
-  const { user_name: user } = req.body;
+  const { assignee: userId } = req.body;
 
   try {
     // Check for missing data
@@ -203,16 +209,57 @@ const assignTask = async (req, res, next) => {
       throw error;
     }
 
-    // Update the task with the new user_name and an option to return the latest data
-    const updatedTask = await Task.findByIdAndUpdate(
-      taskId,
-      { user_name: user },
-      { new: true }
-    );
+    // If there is a userId in the request body, assign the task to the user
+    if (userId) {
+      // Check if the userId is valid
+      if (!isValidObjectId(userId)) {
+        const error = new Error("User id must be ObjectID!");
+        error.statusCode = 400;
+        throw error;
+      }
 
-    res
-      .status(StatusCodes.OK)
-      .json({ task: updatedTask, message: "Assign task successfully!" });
+      const user = await User.findById(userId);
+
+      // Check if the user exists
+      if (!user || user.isDeleted) {
+        const error = new Error("User does not exist!");
+        error.statusCode = 500;
+        throw error;
+      }
+
+      // Update the task with the new assignee and an option to return the latest data
+      const updatedTask = await Task.findByIdAndUpdate(
+        taskId,
+        { assignee: userId },
+        { new: true }
+      );
+
+      // Update the user with the new task and an option to return the latest data
+      user.tasks.push(taskId);
+      const updatedUser = await User.findByIdAndUpdate(
+        userId,
+        { tasks: user.tasks },
+        { new: true }
+      );
+
+      res.status(StatusCodes.OK).json({
+        task: updatedTask,
+        user: updatedUser,
+        message: "Assign task successfully!",
+      });
+    } else {
+      // else, unassign the task
+      const updatedTask = await Task.findByIdAndUpdate(
+        taskId,
+        { $unset: { assignee: "" } },
+        { new: true }
+      );
+
+      res.status(StatusCodes.OK).json({
+        task: updatedTask,
+        message: "Unassign task successfully!",
+      });
+    }
   } catch (err) {
     next(err);
   }
