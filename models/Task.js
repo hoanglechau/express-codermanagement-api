@@ -22,7 +22,8 @@ const taskSchema = new mongoose.Schema(
       default: Date.now,
     },
     // has a reference to the user model
-    user_name: { type: SchemaTypes.ObjectId, ref: "User" },
+    // A task may have one or no one assigned to it yet
+    assignee: { type: SchemaTypes.ObjectId, ref: "User" },
     isDeleted: { type: Boolean, default: false, required: true },
   },
   {
