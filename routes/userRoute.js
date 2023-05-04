@@ -2,12 +2,12 @@ const express = require("express");
 const { body } = require("express-validator");
 const {
   createUser,
-  getSingleUserById,
   getSingleUserByName,
+  getUserTasks,
   getUsers,
-  editUser,
+  updateUser,
   deleteUser,
-} = require("../controllers/user.controller");
+} = require("../controllers/user");
 const router = express.Router();
 
 // CREATE
@@ -30,16 +30,16 @@ router.get("/", getUsers);
 
 // READ
 /**
- * @route GET api/users/:id
- * @description Get user by id
+ * @route GET api/users/:id/tasks
+ * @description Get all tasks of a user
  * @access public
  */
-router.get("/:id", getSingleUserById);
+router.get("/:id/tasks", getUserTasks);
 
 // READ
 /**
- * @route GET api/users/:id
- * @description Get user by id
+ * @route GET api/users/:name
+ * @description Get user by name
  * @access public
  */
 router.get("/:name", getSingleUserByName);
@@ -49,9 +49,9 @@ router.get("/:name", getSingleUserByName);
  * @route PUT api/users/:id
  * @description Update user's information
  * @access private, manager
- * @requiredBody: updateinfo
+ * @requiredBody: name, role (optional)
  */
-router.put("/:id", editUser);
+router.put("/:id", updateUser);
 
 // DELETE
 /**
