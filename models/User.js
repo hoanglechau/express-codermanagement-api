@@ -1,6 +1,5 @@
 const mongoose = require("mongoose");
 const { Schema } = mongoose;
-const Task = require("./Task");
 
 const userSchema = new mongoose.Schema(
   {
@@ -15,7 +14,8 @@ const userSchema = new mongoose.Schema(
     },
     // has a reference to the task model
     // The ref option is what tells Mongoose which model to use during population
-    tasks: [{ type: Schema.Types.ObjectId, ref: Task }],
+    // A user may have one, many, or no task he/she is responsible for
+    tasks: [{ type: Schema.Types.ObjectId, ref: "Task" }],
     isDeleted: { type: Boolean, default: false, required: true },
   },
   {
